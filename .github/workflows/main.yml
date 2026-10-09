@@ -23,7 +23,6 @@ jobs:
             echo "ERROR: index.html tidak ditemukan"
             exit 1
           }
-
           test -f app_icon1.png || {
             echo "ERROR: app_icon1.png tidak ditemukan"
             exit 1
@@ -41,13 +40,15 @@ jobs:
           java-version: '21'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+          accept-android-sdk-licenses: true
 
       - name: Prepare Capacitor
         run: |
-          mkdir -p www assets
+          mkdir -p www
           cp index.html www/index.html
-          cp app_icon1.png assets/icon.png
 
           cat > package.json <<'JSON'
           {
