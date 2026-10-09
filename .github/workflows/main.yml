@@ -1,4 +1,3 @@
-
 name: Build ID Space APK
 
 on:
@@ -7,13 +6,24 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   build-apk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Check HTML file
+        run: |
+          if [ ! -f index.html ]; then
+            echo "ERROR: index.html tidak ditemukan di folder utama repository."
+            echo "Upload file HTML ID Space dengan nama index.html terlebih dahulu."
+            exit 1
+          fi
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -27,9 +37,9 @@ jobs:
           java-version: '17'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
-      - name: Prepare HTML
+      - name: Prepare HTML and Capacitor
         run: |
           mkdir -p www
           cp index.html www/index.html
@@ -59,11 +69,16 @@ jobs:
 
           npm install
 
-          if [ ! -f capacitor.config.json ]; then
-            npx cap init "Private Couple Space" "com.idspace.couple" --web-dir=www
+          if [ ! -f capacitor.config.json ] && \
+             [ ! -f capacitor.config.ts ] && \
+             [ ! -f capacitor.config.js ]; then
+            npx cap init "ID Space" "com.idspace.couple" --web-dir=www
           fi
 
-          npx cap add android
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
+
           npx cap sync android
 
       - name: Build APK
