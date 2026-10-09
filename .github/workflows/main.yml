@@ -78,6 +78,44 @@ jobs:
           fi
 
           npx cap sync android
+          
+      - name: Set Android App Icon
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+          test -f app_icon1.png || {
+            echo "app_icon1.png tidak ditemukan"
+            exit 1
+          }
+
+          mkdir -p /tmp/idspace-icons
+          for size in 48 72 96 144 192; do
+            convert app_icon1.png \
+              -resize ${size}x${size} \
+              /tmp/idspace-icons/icon-${size}.png
+          done
+
+          python3 - <<'PY'
+          import os, shutil
+          from pathlib import Path
+
+          root = Path("android/app/src/main/res")
+          sizes = {
+              "48": "mipmap-mdpi",
+              "72": "mipmap-hdpi",
+              "96": "mipmap-xhdpi",
+              "144": "mipmap-xxhdpi",
+              "192": "mipmap-xxxhdpi",
+          }
+
+          for size, folder in sizes.items():
+              dest = root / folder
+              dest.mkdir(parents=True, exist_ok=True)
+              src = Path("/tmp/idspace-icons") / f"icon-{size}.png"
+              shutil.copy2(src, dest / "ic_launcher.png")
+              shutil.copy2(src, dest / "ic_launcher_round.png")
+          PY
 
       - name: Build APK
         run: |
