@@ -19,14 +19,8 @@ jobs:
 
       - name: Check application files
         run: |
-          test -f index.html || {
-            echo "ERROR: index.html tidak ditemukan"
-            exit 1
-          }
-          test -f app_icon1.png || {
-            echo "ERROR: app_icon1.png tidak ditemukan"
-            exit 1
-          }
+          test -f index.html
+          test -f app_icon1.png
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -42,11 +36,12 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
         with:
-          packages: |
-            platform-tools
-            platforms;android-35
-            build-tools;35.0.0
+          packages: 'platform-tools'
           accept-android-sdk-licenses: true
+
+      - name: Install Android platform
+        run: |
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
 
       - name: Prepare Capacitor
         run: |
@@ -90,12 +85,8 @@ jobs:
           RES="android/app/src/main/res"
 
           mkdir -p "$RES/drawable-nodpi"
-
-          convert app_icon1.png \
-            -resize 324x324 \
-            -gravity center \
-            -background none \
-            -extent 432x432 \
+          convert app_icon1.png -resize 324x324 \
+            -gravity center -background none -extent 432x432 \
             "$RES/drawable-nodpi/idspace_launcher_foreground.png"
 
           for item in "48 mipmap-mdpi" \
@@ -106,11 +97,9 @@ jobs:
             set -- $item
             size="$1"
             folder="$2"
-
             mkdir -p "$RES/$folder"
 
-            convert app_icon1.png \
-              -resize "${size}x${size}" \
+            convert app_icon1.png -resize "${size}x${size}" \
               "$RES/$folder/ic_launcher.png"
 
             cp "$RES/$folder/ic_launcher.png" \
@@ -127,13 +116,8 @@ jobs:
           </adaptive-icon>
           XML
 
-          cat > "$RES/mipmap-anydpi-v26/ic_launcher_round.xml" <<'XML'
-          <?xml version="1.0" encoding="utf-8"?>
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-              <background android:drawable="@android:color/white"/>
-              <foreground android:drawable="@drawable/idspace_launcher_foreground"/>
-          </adaptive-icon>
-          XML
+          cp "$RES/mipmap-anydpi-v26/ic_launcher.xml" \
+             "$RES/mipmap-anydpi-v26/ic_launcher_round.xml"
 
       - name: Build APK
         run: |
