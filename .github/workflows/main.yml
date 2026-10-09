@@ -1,0 +1,80 @@
+
+name: Build ID Space APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Prepare HTML
+        run: |
+          mkdir -p www
+          cp index.html www/index.html
+
+          if [ -f app_icon1.png ]; then
+            cp app_icon1.png www/app_icon1.png
+          fi
+
+          if [ -f manifest.json ]; then
+            cp manifest.json www/manifest.json
+          fi
+
+          cat > package.json <<'JSON'
+          {
+            "name": "id-space-couple",
+            "version": "1.0.0",
+            "private": true,
+            "dependencies": {
+              "@capacitor/android": "^7.4.3",
+              "@capacitor/core": "^7.4.3"
+            },
+            "devDependencies": {
+              "@capacitor/cli": "^7.4.3"
+            }
+          }
+          JSON
+
+          npm install
+
+          if [ ! -f capacitor.config.json ]; then
+            npx cap init "Private Couple Space" "com.idspace.couple" --web-dir=www
+          fi
+
+          npx cap add android
+          npx cap sync android
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ID-Space-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
