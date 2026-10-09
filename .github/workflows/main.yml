@@ -42,7 +42,10 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
         with:
-          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+          packages: |
+            platform-tools
+            platforms;android-35
+            build-tools;35.0.0
           accept-android-sdk-licenses: true
 
       - name: Prepare Capacitor
@@ -78,44 +81,59 @@ jobs:
           fi
 
           npx cap sync android
-          
-      - name: Set Android App Icon
+
+      - name: Apply Couple App Icon
         run: |
           sudo apt-get update
           sudo apt-get install -y imagemagick
 
-          test -f app_icon1.png || {
-            echo "app_icon1.png tidak ditemukan"
-            exit 1
-          }
+          RES="android/app/src/main/res"
 
-          mkdir -p /tmp/idspace-icons
-          for size in 48 72 96 144 192; do
+          mkdir -p "$RES/drawable-nodpi"
+
+          convert app_icon1.png \
+            -resize 324x324 \
+            -gravity center \
+            -background none \
+            -extent 432x432 \
+            "$RES/drawable-nodpi/idspace_launcher_foreground.png"
+
+          for item in "48 mipmap-mdpi" \
+                      "72 mipmap-hdpi" \
+                      "96 mipmap-xhdpi" \
+                      "144 mipmap-xxhdpi" \
+                      "192 mipmap-xxxhdpi"; do
+            set -- $item
+            size="$1"
+            folder="$2"
+
+            mkdir -p "$RES/$folder"
+
             convert app_icon1.png \
-              -resize ${size}x${size} \
-              /tmp/idspace-icons/icon-${size}.png
+              -resize "${size}x${size}" \
+              "$RES/$folder/ic_launcher.png"
+
+            cp "$RES/$folder/ic_launcher.png" \
+              "$RES/$folder/ic_launcher_round.png"
           done
 
-          python3 - <<'PY'
-          import os, shutil
-          from pathlib import Path
+          mkdir -p "$RES/mipmap-anydpi-v26"
 
-          root = Path("android/app/src/main/res")
-          sizes = {
-              "48": "mipmap-mdpi",
-              "72": "mipmap-hdpi",
-              "96": "mipmap-xhdpi",
-              "144": "mipmap-xxhdpi",
-              "192": "mipmap-xxxhdpi",
-          }
+          cat > "$RES/mipmap-anydpi-v26/ic_launcher.xml" <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@android:color/white"/>
+              <foreground android:drawable="@drawable/idspace_launcher_foreground"/>
+          </adaptive-icon>
+          XML
 
-          for size, folder in sizes.items():
-              dest = root / folder
-              dest.mkdir(parents=True, exist_ok=True)
-              src = Path("/tmp/idspace-icons") / f"icon-{size}.png"
-              shutil.copy2(src, dest / "ic_launcher.png")
-              shutil.copy2(src, dest / "ic_launcher_round.png")
-          PY
+          cat > "$RES/mipmap-anydpi-v26/ic_launcher_round.xml" <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@android:color/white"/>
+              <foreground android:drawable="@drawable/idspace_launcher_foreground"/>
+          </adaptive-icon>
+          XML
 
       - name: Build APK
         run: |
