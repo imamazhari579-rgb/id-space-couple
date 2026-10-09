@@ -17,13 +17,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check HTML file
+      - name: Check application files
         run: |
-          if [ ! -f index.html ]; then
-            echo "ERROR: index.html tidak ditemukan di folder utama repository."
-            echo "Upload file HTML ID Space dengan nama index.html terlebih dahulu."
+          test -f index.html || {
+            echo "index.html tidak ditemukan"
             exit 1
-          fi
+          }
+          test -f app_icon1.png || {
+            echo "app_icon1.png tidak ditemukan"
+            exit 1
+          }
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -39,18 +42,12 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
-      - name: Prepare HTML and Capacitor
+      - name: Prepare Capacitor
         run: |
-          mkdir -p www
+          mkdir -p www assets
           cp index.html www/index.html
-
-          if [ -f app_icon1.png ]; then
-            cp app_icon1.png www/app_icon1.png
-          fi
-
-          if [ -f manifest.json ]; then
-            cp manifest.json www/manifest.json
-          fi
+          cp app_icon1.png assets/icon.png
+          cp app_icon1.png assets/splash.png
 
           cat > package.json <<'JSON'
           {
@@ -62,23 +59,21 @@ jobs:
               "@capacitor/core": "^7.4.3"
             },
             "devDependencies": {
-              "@capacitor/cli": "^7.4.3"
+              "@capacitor/cli": "^7.4.3",
+              "@capacitor/assets": "^3.0.5"
             }
           }
           JSON
 
           npm install
 
-          if [ ! -f capacitor.config.json ] && \
-             [ ! -f capacitor.config.ts ] && \
-             [ ! -f capacitor.config.js ]; then
+          if [ ! -f capacitor.config.json ]; then
             npx cap init "ID Space" "com.idspace.couple" --web-dir=www
           fi
 
-          if [ ! -d android ]; then
-            npx cap add android
-          fi
-
+          npx cap add android
+          npx cap sync android
+          npx capacitor-assets generate --android
           npx cap sync android
 
       - name: Build APK
