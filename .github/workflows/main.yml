@@ -20,34 +20,34 @@ jobs:
       - name: Check application files
         run: |
           test -f index.html || {
-            echo "index.html tidak ditemukan"
+            echo "ERROR: index.html tidak ditemukan"
             exit 1
           }
+
           test -f app_icon1.png || {
-            echo "app_icon1.png tidak ditemukan"
+            echo "ERROR: app_icon1.png tidak ditemukan"
             exit 1
           }
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20'
 
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
+        uses: android-actions/setup-android@v3
 
       - name: Prepare Capacitor
         run: |
           mkdir -p www assets
           cp index.html www/index.html
           cp app_icon1.png assets/icon.png
-          cp app_icon1.png assets/splash.png
 
           cat > package.json <<'JSON'
           {
@@ -59,21 +59,23 @@ jobs:
               "@capacitor/core": "^7.4.3"
             },
             "devDependencies": {
-              "@capacitor/cli": "^7.4.3",
-              "@capacitor/assets": "^3.0.5"
+              "@capacitor/cli": "^7.4.3"
             }
           }
           JSON
 
           npm install
 
-          if [ ! -f capacitor.config.json ]; then
+          if [ ! -f capacitor.config.json ] && \
+             [ ! -f capacitor.config.ts ] && \
+             [ ! -f capacitor.config.js ]; then
             npx cap init "ID Space" "com.idspace.couple" --web-dir=www
           fi
 
-          npx cap add android
-          npx cap sync android
-          npx capacitor-assets generate --android
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
+
           npx cap sync android
 
       - name: Build APK
